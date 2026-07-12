@@ -81,6 +81,27 @@ jobs:
 
 Inputs: `julia-version` (default `1`), `pre-build` (optional Julia script before `make.jl` — e.g. an atlas generator), `preview-base` (docs host; preview link is `<base>/<repo>/previews/PR<N>/`).
 
+
+### Julia CI with optional sharding
+
+One `shards` input toggles sharding — `shards: 1` (default) runs a single
+unsharded `Pkg.test`; `shards: 16` fans out into 16 parallel shards.
+
+```yaml
+name: CI
+on: { push: { branches: [main] }, pull_request: {} }
+jobs:
+  ci:
+    uses: QAtlasHub/.github/.github/workflows/julia-ci.yml@main
+    with:
+      shards: 16          # omit or set 1 for a plain single-job Pkg.test
+```
+
+**Sharding contract** (only when `shards > 1`): `test/ci/plan_shards.jl <N> [timings.tsv]`
+prints `{"include":[{"sid":"s01","cases":"…"}, …]}`; the suite reads env `CI_CASES`
+(`""` = all). LPT planning activates when a `ci-timings` orphan branch exists,
+else round-robin. Absent `plan_shards.jl` → safe unsharded fallback.
+
 ## Per-repo only (cannot be centralised)
 - **`dependabot.yml`** — Dependabot config is per-repository; copy this repo's
   `.github/dependabot.yml` into each repo. (There is no org-level default.)
