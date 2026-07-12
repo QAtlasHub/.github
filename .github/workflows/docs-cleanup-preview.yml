@@ -1,0 +1,27 @@
+# Reusable: on PR close, remove its docs preview directory from gh-pages. Caller:
+#   on: { pull_request: { types: [closed] } }
+#   jobs: { cleanup: { uses: QAtlasHub/.github/.github/workflows/docs-cleanup-preview.yml@main } }
+name: Docs Cleanup Preview (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+      - name: Remove the PR's preview directory
+        run: |
+          dir="previews/PR${{ github.event.pull_request.number }}"
+          if [ -d "$dir" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git rm -r "$dir"
+            git commit -m "chore: remove docs preview for PR#${{ github.event.pull_request.number }}"
+            git push
+          else
+            echo "No preview directory ($dir) to remove."
+          fi

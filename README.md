@@ -45,6 +45,42 @@ jobs:
     secrets: inherit
 ```
 
+
+### Documentation (Documenter.jl)
+
+**Deploy** (live site on push to main) — `.github/workflows/Documentation.yml`:
+```yaml
+name: Documentation
+on: { push: { branches: [main], tags: ['*'] }, workflow_dispatch: {} }
+jobs:
+  docs:
+    uses: QAtlasHub/.github/.github/workflows/docs-deploy.yml@main
+    secrets: inherit
+    # with: { pre-build: docs/atlas/generate.jl }   # optional pre-make hook
+```
+
+**Preview** (PR preview + sticky URL comment) — `.github/workflows/DocsPreview.yml`:
+```yaml
+name: Docs Preview
+on: { pull_request: {} }
+jobs:
+  preview:
+    uses: QAtlasHub/.github/.github/workflows/docs-preview.yml@main
+    secrets: inherit
+    # with: { preview-base: https://codes.sota-shimozono.com }
+```
+
+**Delete preview** (remove previews/PR<N> on close) — `.github/workflows/CleanupPreview.yml`:
+```yaml
+name: Cleanup Preview
+on: { pull_request: { types: [closed] } }
+jobs:
+  cleanup:
+    uses: QAtlasHub/.github/.github/workflows/docs-cleanup-preview.yml@main
+```
+
+Inputs: `julia-version` (default `1`), `pre-build` (optional Julia script before `make.jl` — e.g. an atlas generator), `preview-base` (docs host; preview link is `<base>/<repo>/previews/PR<N>/`).
+
 ## Per-repo only (cannot be centralised)
 - **`dependabot.yml`** — Dependabot config is per-repository; copy this repo's
   `.github/dependabot.yml` into each repo. (There is no org-level default.)
