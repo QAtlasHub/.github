@@ -91,7 +91,7 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ inputs.julia-version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
         with:
           cache-name: shard-${{ matrix.sid }}
           # a per-shard key; the default include-matrix serializes the whole
