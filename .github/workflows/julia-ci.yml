@@ -65,7 +65,7 @@ jobs:
               : > timings.tsv
             fi
             matrix=$(julia --startup-file=no test/ci/plan_shards.jl "$N" timings.tsv)
-            count=$(echo "$matrix" | julia --startup-file=no -e 'using JSON; println(length(JSON.parse(read(stdin,String))["include"]))' 2>/dev/null || echo 0)
+            count=$(echo "$matrix" | jq 'length' 2>/dev/null || echo 0)
             if [ "${count:-0}" -eq 0 ]; then
               echo "::error::plan_shards.jl produced an empty plan"; exit 1
             fi
@@ -74,7 +74,7 @@ jobs:
             if [ "$N" -gt 1 ]; then
               echo "::warning::shards=$N but test/ci/plan_shards.jl not found — running unsharded."
             fi
-            matrix='{"include":[{"sid":"all","cases":""}]}'
+            matrix='[{"sid":"all","cases":""}]'
           fi
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
