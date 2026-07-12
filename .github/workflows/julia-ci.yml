@@ -26,9 +26,16 @@ on:
       julia-version:
         type: string
         default: '1'
+      coverage:
+        description: 'Process coverage and upload to Codecov (needs the CODECOV_TOKEN secret).'
+        type: boolean
+        default: true
       os:
         type: string
         default: 'ubuntu-latest'
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
 jobs:
   plan:
@@ -95,6 +102,18 @@ jobs:
         uses: julia-actions/julia-runtest@v1
         env:
           CI_CASES: ${{ matrix.cases }}
+      - name: Process coverage
+        if: ${{ inputs.coverage }}
+        uses: julia-actions/julia-processcoverage@v1
+      - name: Upload coverage to Codecov
+        if: ${{ inputs.coverage }}
+        uses: codecov/codecov-action@v5
+        continue-on-error: true          # never fail CI on a flaky coverage upload
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
+          flags: shard-${{ matrix.sid }}   # Codecov merges the per-shard uploads
+          fail_ci_if_error: false
 
   gate:
     name: All shards passed
