@@ -1,0 +1,4 @@
+# Org-default issue chooser config (inherited by QAtlasHub repos without their
+# own ISSUE_TEMPLATE). Blank issues stay enabled alongside the structured forms;
+# a repo that wants a Discussions contact link ships its own ISSUE_TEMPLATE.
+blank_issues_enabled: true
