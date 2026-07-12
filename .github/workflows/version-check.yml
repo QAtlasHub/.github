@@ -1,0 +1,67 @@
+# Reusable: a PR to main must bump Project.toml version by EXACTLY ONE semver
+# step — patch (X.Y.Z→X.Y.Z+1), minor (→X.Y+1.0) or major (→X+1.0.0). Skips of
+# two or more (e.g. 0.25.3→0.25.5, or a skipped minor) fail, so no version is
+# silently jumped over. Call from a repo with:
+#   jobs: { version: { uses: QAtlasHub/.github/.github/workflows/version-check.yml@main } }
+name: Version Check (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Get base branch version
+        id: base
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          VERSION=$(git show origin/${{ github.base_ref }}:Project.toml \
+            | grep '^version' | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Base version: $VERSION"
+      - name: Get PR branch version
+        id: pr
+        run: |
+          VERSION=$(grep '^version' Project.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "PR version: $VERSION"
+      - name: Require exactly one semver step
+        env:
+          BASE: ${{ steps.base.outputs.version }}
+          PR:   ${{ steps.pr.outputs.version }}
+        run: |
+          IFS='.' read -r bM bm bp <<< "$BASE"
+          IFS='.' read -r pM pm pp <<< "$PR"
+          bM=${bM:-0}; bm=${bm:-0}; bp=${bp:-0}
+          pM=${pM:-0}; pm=${pm:-0}; pp=${pp:-0}
+          echo "Base: $BASE  →  PR: $PR"
+
+          ok=0; kind=""
+          # patch: X.Y.Z -> X.Y.(Z+1)
+          if [ "$pM" -eq "$bM" ] && [ "$pm" -eq "$bm" ] && [ "$pp" -eq $((bp + 1)) ]; then ok=1; kind="patch"; fi
+          # minor: X.Y.Z -> X.(Y+1).0
+          if [ "$pM" -eq "$bM" ] && [ "$pm" -eq $((bm + 1)) ] && [ "$pp" -eq 0 ]; then ok=1; kind="minor"; fi
+          # major: X.Y.Z -> (X+1).0.0
+          if [ "$pM" -eq $((bM + 1)) ] && [ "$pm" -eq 0 ] && [ "$pp" -eq 0 ]; then ok=1; kind="major"; fi
+
+          if [ "$ok" -eq 1 ]; then
+            echo "✓ Single-step $kind bump ($BASE → $PR)"
+            exit 0
+          fi
+
+          # classify the failure for a clear message
+          greater=0
+          if [ "$pM" -gt "$bM" ] \
+            || { [ "$pM" -eq "$bM" ] && [ "$pm" -gt "$bm" ]; } \
+            || { [ "$pM" -eq "$bM" ] && [ "$pm" -eq "$bm" ] && [ "$pp" -gt "$bp" ]; }; then greater=1; fi
+          if [ "$greater" -eq 0 ]; then
+            echo "✗ Version NOT bumped: PR ($PR) must be strictly greater than base ($BASE)."
+          else
+            echo "✗ Version jumped more than one step ($BASE → $PR)."
+            echo "  Bump exactly one: patch → $bM.$bm.$((bp + 1)) | minor → $bM.$((bm + 1)).0 | major → $((bM + 1)).0.0"
+          fi
+          exit 1

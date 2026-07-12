@@ -1,0 +1,24 @@
+# Reusable auto-merge for bot PRs (CompatHelper / dependabot / TagBot) and any PR
+# labelled `automerge`. Call from a repo with:
+#   on: { pull_request: { types: [opened, synchronize, reopened, labeled] } }
+#   jobs: { automerge: { uses: QAtlasHub/.github/.github/workflows/automerge.yml@main, secrets: inherit } }
+# Prerequisite: repo Settings → General → "Allow auto-merge" enabled, and branch
+# protection with required status checks (so `--auto` waits for green before merging).
+name: AutoMerge (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.user.type == 'Bot' ||
+      contains(github.event.pull_request.labels.*.name, 'automerge')
+    steps:
+      - name: Enable auto-merge (squash, delete branch)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash --delete-branch "$PR_URL"

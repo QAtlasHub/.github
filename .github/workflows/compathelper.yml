@@ -1,0 +1,31 @@
+# Reusable CompatHelper. Call from a repo with:
+#   on: { schedule: [{cron: '0 */4 * * *'}], workflow_dispatch: {} }
+#   jobs: { compathelper: { uses: QAtlasHub/.github/.github/workflows/compathelper.yml@main, secrets: inherit } }
+# COMPATHELPER_PRIV (= the repo's DOCUMENTER_KEY) lets it also bump [compat] for
+# git/[sources] deps; optional.
+name: CompatHelper (reusable)
+on:
+  workflow_call:
+    secrets:
+      COMPATHELPER_PRIV:
+        required: false
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  CompatHelper:
+    runs-on: ubuntu-latest
+    steps:
+      # NOTE: the fleet template had `if: steps.julia.outcome == 'skipped'` here,
+      # referencing a non-existent step, so setup-julia was always SKIPPED — a
+      # latent bug. Fixed by always installing Julia.
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - name: Pkg.add("CompatHelper")
+        run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
+      - name: CompatHelper.main()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}
+        run: julia -e 'using CompatHelper; CompatHelper.main()'
