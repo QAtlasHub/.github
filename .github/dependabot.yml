@@ -1,0 +1,9 @@
+# NOTE: dependabot config is PER-REPOSITORY — it is NOT inheritable from the
+# `.github` repo. This file only covers the `.github` repo itself. Copy it into
+# each repo's .github/dependabot.yml (it is the fleet-canonical version).
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

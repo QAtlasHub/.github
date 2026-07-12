@@ -1,0 +1,3 @@
+# Org-wide default sponsor button. Inherited by every QAtlasHub repo that does
+# not ship its own .github/FUNDING.yml.
+github: [sotashimozono]

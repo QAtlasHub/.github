@@ -1,0 +1,51 @@
+# Reusable: ensures a PR to main bumps Project.toml version (strictly greater).
+# Call from a repo with:
+#   jobs: { version: { uses: QAtlasHub/.github/.github/workflows/version-check.yml@main } }
+name: Version Check (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Get base branch version
+        id: base
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          VERSION=$(git show origin/${{ github.base_ref }}:Project.toml \
+            | grep '^version' | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Base version: $VERSION"
+      - name: Get PR branch version
+        id: pr
+        run: |
+          VERSION=$(grep '^version' Project.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "PR version: $VERSION"
+      - name: Compare versions (semver)
+        env:
+          BASE: ${{ steps.base.outputs.version }}
+          PR:   ${{ steps.pr.outputs.version }}
+        run: |
+          version_gt() {
+            IFS='.' read -r -a A <<< "$1"
+            IFS='.' read -r -a B <<< "$2"
+            for i in 0 1 2; do
+              a="${A[$i]:-0}"; b="${B[$i]:-0}"
+              if [ "$a" -gt "$b" ]; then return 0; fi
+              if [ "$a" -lt "$b" ]; then return 1; fi
+            done
+            return 1
+          }
+          echo "Base: $BASE  →  PR: $PR"
+          if version_gt "$PR" "$BASE"; then
+            echo "✓ Version bumped ($BASE → $PR)"
+          else
+            echo "✗ PR version ($PR) must be strictly greater than base ($BASE)."
+            exit 1
+          fi
