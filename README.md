@@ -102,6 +102,39 @@ prints `{"include":[{"sid":"s01","cases":"…"}, …]}`; the suite reads env `CI
 (`""` = all). LPT planning activates when a `ci-timings` orphan branch exists,
 else round-robin. Absent `plan_shards.jl` → safe unsharded fallback.
 
+
+### Release automation (labeler → drafter → autoregister → tagbot)
+
+The label→version→register→tag→notes chain, all reusable:
+
+```yaml
+# PRLabeler.yml
+on: { pull_request: { types: [opened, edited, synchronize, reopened] } }
+jobs: { label: { uses: QAtlasHub/.github/.github/workflows/labeler.yml@main } }
+```
+```yaml
+# ReleaseDrafter.yml   (repo also ships .github/release-drafter.yml config)
+on: { push: { branches: [main] }, pull_request: { types: [opened, reopened, synchronize, edited] } }
+jobs: { draft: { uses: QAtlasHub/.github/.github/workflows/release-drafter.yml@main } }
+```
+```yaml
+# AutoRegister.yml
+on: { workflow_run: { workflows: ["Release Drafter"], types: [completed], branches: [main] } }
+jobs: { register: { uses: QAtlasHub/.github/.github/workflows/autoregister.yml@main } }
+```
+```yaml
+# TagBot.yml
+on: { issue_comment: { types: [created] }, workflow_dispatch: { inputs: { lookback: { default: "3" } } } }
+jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@main, secrets: inherit } }
+```
+
+- **labeler** feeds `enhancement`/`bug`/… labels from the PR title + Type-of-Change checkboxes → drives the version-resolver and release-notes categories.
+- **release-drafter** resolves the next version from labels + keeps a draft (needs the repo's `.github/release-drafter.yml`).
+- **autoregister** posts `@JuliaRegistrator register` on a version change (minimal `## Changelog` stub — the rich notes come from the release-notes action).
+- **tagbot** tags + a **minimal changelog** (the release-notes action owns the body → single source).
+
+> Formatting is standardised on **format-check** (JuliaFormatter v2 verify), replacing the older FormatFix auto-commit flow.
+
 ## Per-repo only (cannot be centralised)
 - **`dependabot.yml`** — Dependabot config is per-repository; copy this repo's
   `.github/dependabot.yml` into each repo. (There is no org-level default.)
