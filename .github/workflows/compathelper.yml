@@ -7,6 +7,10 @@ name: CompatHelper (reusable)
 on:
   workflow_call:
     secrets:
+      # A PAT so CompatHelper's PRs are created by a real user and therefore
+      # TRIGGER CI (GITHUB_TOKEN-created PRs do not — the AutoMerge blocker).
+      BOT_PAT:
+        required: false
       COMPATHELPER_PRIV:
         required: false
 permissions:
@@ -26,6 +30,6 @@ jobs:
         run: julia -e 'using Pkg; Pkg.add("CompatHelper")'
       - name: CompatHelper.main()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.BOT_PAT || secrets.GITHUB_TOKEN }}
           COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}
         run: julia -e 'using CompatHelper; CompatHelper.main()'

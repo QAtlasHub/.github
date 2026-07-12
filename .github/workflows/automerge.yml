@@ -7,6 +7,11 @@
 name: AutoMerge (reusable)
 on:
   workflow_call:
+    secrets:
+      # A PAT lets the workflow merge bot PRs; the default GITHUB_TOKEN on a
+      # bot-triggered run (e.g. dependabot) is read-only and cannot merge.
+      BOT_PAT:
+        required: false
 permissions:
   contents: write
   pull-requests: write
@@ -19,6 +24,6 @@ jobs:
     steps:
       - name: Enable auto-merge (squash, delete branch)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOT_PAT || secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash --delete-branch "$PR_URL"
