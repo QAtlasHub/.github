@@ -34,6 +34,12 @@ jobs:
           BASE: ${{ steps.base.outputs.version }}
           PR:   ${{ steps.pr.outputs.version }}
         run: |
+          # Bot-authored PRs (CompatHelper / dependabot) bump [compat]/deps, not
+          # the package version — exempt them so the required check still runs
+          # (and passes) instead of blocking auto-merge.
+          if [ "${{ github.event.pull_request.user.type }}" = "Bot" ]; then
+            echo "✓ bot-authored PR — version bump not required"; exit 0
+          fi
           IFS='.' read -r bM bm bp <<< "$BASE"
           IFS='.' read -r pM pm pp <<< "$PR"
           bM=${bM:-0}; bm=${bm:-0}; bp=${bp:-0}
