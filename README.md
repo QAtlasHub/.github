@@ -135,6 +135,26 @@ jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@v1, secre
 
 > Formatting is standardised on **format-check** (JuliaFormatter v2 verify), replacing the older FormatFix auto-commit flow.
 
+
+### Rich release notes (single source)
+
+`.github/workflows/PublishRelease.yml`:
+```yaml
+name: Publish Release
+on: { push: { tags: ['v*'] }, workflow_dispatch: { inputs: { tag: { required: true } } } }
+permissions: { contents: write }
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: QAtlasHub/.github/actions/release-notes@v1
+```
+Builds one clean `## What's Changed`→category→per-PR `<details>` from each PR's
+Proposed Changes / Usage or Results sections. Pair with TagBot minimal changelog
++ release-drafter as version-resolver so no doubled changelog appears.
+
 ## Per-repo only (cannot be centralised)
 - **`dependabot.yml`** — Dependabot config is per-repository; copy this repo's
   `.github/dependabot.yml` into each repo. (There is no org-level default.)

@@ -1,0 +1,36 @@
+# Rich GitHub Release notes built from each merged PR's "## Proposed Changes" and
+# "## Usage or Results" sections (the org PR template), grouped by label. Single
+# source of release notes — pair with TagBot minimal changelog + release-drafter
+# as version-resolver only. Caller must checkout with fetch-depth: 0.
+name: 'Rich Release Notes'
+description: 'Publish a GitHub Release with rich notes extracted from each PR''s Proposed Changes / Usage or Results sections.'
+author: 'QAtlasHub'
+branding:
+  icon: 'file-text'
+  color: 'blue'
+inputs:
+  tag:
+    description: 'Tag to publish (defaults to the pushed ref).'
+    required: false
+    default: ${{ github.ref_name }}
+  token:
+    description: 'GitHub token (needs contents: write).'
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: composite
+  steps:
+    - name: Build rich notes and publish the release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        TAG="${{ inputs.tag }}"
+        python3 "${{ github.action_path }}/build_release_notes.py" --tag "$TAG" > "${RUNNER_TEMP}/notes.md"
+        echo "--- generated notes ---"; cat "${RUNNER_TEMP}/notes.md"; echo "-----------------------"
+        if gh release view "$TAG" >/dev/null 2>&1; then
+          gh release edit "$TAG" --title "$TAG" --notes-file "${RUNNER_TEMP}/notes.md" --draft=false
+        else
+          gh release create "$TAG" --title "$TAG" --notes-file "${RUNNER_TEMP}/notes.md"
+        fi
