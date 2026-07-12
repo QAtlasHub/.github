@@ -1,0 +1,13 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request: {}
+jobs:
+  format:
+    uses: QAtlasHub/.github/.github/workflows/format-check.yml@v1
+  version:
+    uses: QAtlasHub/.github/.github/workflows/version-check.yml@v1
+  ci:
+    uses: QAtlasHub/.github/.github/workflows/julia-ci.yml@v1
+    with: { shards: 1 }        # set 16 for sharded CI
+    secrets: inherit

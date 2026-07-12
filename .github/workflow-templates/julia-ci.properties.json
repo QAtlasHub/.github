@@ -1,0 +1,6 @@
+{
+  "name": "QAtlasHub Julia CI",
+  "description": "Format + version + test (reusable), optional sharding.",
+  "iconName": "octicon-checklist",
+  "categories": ["Julia"]
+}

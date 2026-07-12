@@ -14,7 +14,7 @@ Reference with the (intentional) double `.github` path, pinned to `@main`:
 name: Format Check
 on: { pull_request: { paths: ['**/*.jl'] } }
 jobs:
-  format: { uses: QAtlasHub/.github/.github/workflows/format-check.yml@main }
+  format: { uses: QAtlasHub/.github/.github/workflows/format-check.yml@v1 }
 ```
 
 **Version check** — `.github/workflows/VersionCheck.yml`:
@@ -22,7 +22,7 @@ jobs:
 name: VersionCheck
 on: { pull_request: { branches: [main] } }
 jobs:
-  version: { uses: QAtlasHub/.github/.github/workflows/version-check.yml@main }
+  version: { uses: QAtlasHub/.github/.github/workflows/version-check.yml@v1 }
 ```
 
 **CompatHelper** — `.github/workflows/CompatHelper.yml`:
@@ -31,7 +31,7 @@ name: CompatHelper
 on: { schedule: [{ cron: '0 */4 * * *' }], workflow_dispatch: {} }
 jobs:
   compathelper:
-    uses: QAtlasHub/.github/.github/workflows/compathelper.yml@main
+    uses: QAtlasHub/.github/.github/workflows/compathelper.yml@v1
     secrets: inherit
 ```
 
@@ -41,7 +41,7 @@ name: AutoMerge
 on: { pull_request: { types: [opened, synchronize, reopened, labeled] } }
 jobs:
   automerge:
-    uses: QAtlasHub/.github/.github/workflows/automerge.yml@main
+    uses: QAtlasHub/.github/.github/workflows/automerge.yml@v1
     secrets: inherit
 ```
 
@@ -54,7 +54,7 @@ name: Documentation
 on: { push: { branches: [main], tags: ['*'] }, workflow_dispatch: {} }
 jobs:
   docs:
-    uses: QAtlasHub/.github/.github/workflows/docs-deploy.yml@main
+    uses: QAtlasHub/.github/.github/workflows/docs-deploy.yml@v1
     secrets: inherit
     # with: { pre-build: docs/atlas/generate.jl }   # optional pre-make hook
 ```
@@ -65,7 +65,7 @@ name: Docs Preview
 on: { pull_request: {} }
 jobs:
   preview:
-    uses: QAtlasHub/.github/.github/workflows/docs-preview.yml@main
+    uses: QAtlasHub/.github/.github/workflows/docs-preview.yml@v1
     secrets: inherit
     # with: { preview-base: https://codes.sota-shimozono.com }
 ```
@@ -76,7 +76,7 @@ name: Cleanup Preview
 on: { pull_request: { types: [closed] } }
 jobs:
   cleanup:
-    uses: QAtlasHub/.github/.github/workflows/docs-cleanup-preview.yml@main
+    uses: QAtlasHub/.github/.github/workflows/docs-cleanup-preview.yml@v1
 ```
 
 Inputs: `julia-version` (default `1`), `pre-build` (optional Julia script before `make.jl` — e.g. an atlas generator), `preview-base` (docs host; preview link is `<base>/<repo>/previews/PR<N>/`).
@@ -92,7 +92,7 @@ name: CI
 on: { push: { branches: [main] }, pull_request: {} }
 jobs:
   ci:
-    uses: QAtlasHub/.github/.github/workflows/julia-ci.yml@main
+    uses: QAtlasHub/.github/.github/workflows/julia-ci.yml@v1
     with:
       shards: 16          # omit or set 1 for a plain single-job Pkg.test
 ```
@@ -110,22 +110,22 @@ The label→version→register→tag→notes chain, all reusable:
 ```yaml
 # PRLabeler.yml
 on: { pull_request: { types: [opened, edited, synchronize, reopened] } }
-jobs: { label: { uses: QAtlasHub/.github/.github/workflows/labeler.yml@main } }
+jobs: { label: { uses: QAtlasHub/.github/.github/workflows/labeler.yml@v1 } }
 ```
 ```yaml
 # ReleaseDrafter.yml   (repo also ships .github/release-drafter.yml config)
 on: { push: { branches: [main] }, pull_request: { types: [opened, reopened, synchronize, edited] } }
-jobs: { draft: { uses: QAtlasHub/.github/.github/workflows/release-drafter.yml@main } }
+jobs: { draft: { uses: QAtlasHub/.github/.github/workflows/release-drafter.yml@v1 } }
 ```
 ```yaml
 # AutoRegister.yml
 on: { workflow_run: { workflows: ["Release Drafter"], types: [completed], branches: [main] } }
-jobs: { register: { uses: QAtlasHub/.github/.github/workflows/autoregister.yml@main } }
+jobs: { register: { uses: QAtlasHub/.github/.github/workflows/autoregister.yml@v1 } }
 ```
 ```yaml
 # TagBot.yml
 on: { issue_comment: { types: [created] }, workflow_dispatch: { inputs: { lookback: { default: "3" } } } }
-jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@main, secrets: inherit } }
+jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@v1, secrets: inherit } }
 ```
 
 - **labeler** feeds `enhancement`/`bug`/… labels from the PR title + Type-of-Change checkboxes → drives the version-resolver and release-notes categories.
