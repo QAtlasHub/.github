@@ -1,0 +1,18 @@
+# Reusable release-drafter: resolves the next version from PR labels, autolabels,
+# and maintains a draft release. The repo must ship its own
+# `.github/release-drafter.yml` config (categories + version-resolver).
+# Caller: on: { push: { branches: [main] }, pull_request: { types: [opened, reopened, synchronize, edited] } }
+#         jobs: { draft: { uses: QAtlasHub/.github/.github/workflows/release-drafter.yml@main } }
+name: Release Drafter (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  update_release_draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

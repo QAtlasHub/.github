@@ -1,0 +1,38 @@
+# Reusable: label a PR from its title (conventional-commit prefix) and the
+# Type-of-Change checkboxes in the body. These labels drive release-drafter's
+# version-resolver and the release-notes categories.
+# Caller: on: { pull_request: { types: [opened, edited, synchronize, reopened] } }
+#         jobs: { label: { uses: QAtlasHub/.github/.github/workflows/labeler.yml@main } }
+name: PR Labeler (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v9
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        with:
+          script: |
+            const title = (process.env.TITLE || "").toLowerCase();
+            const body = process.env.BODY || "";
+            const labels = new Set();
+            if (/^feat/.test(title)) labels.add("enhancement");
+            if (/^fix/.test(title)) labels.add("bug");
+            if (/^perf/.test(title)) labels.add("performance");
+            if (/^docs/.test(title)) labels.add("documentation");
+            if (/^(chore|refactor|ci|build|test)/.test(title)) labels.add("chore");
+            if (/!:/.test(title) || /breaking/.test(title)) labels.add("breaking");
+            const checked = [...body.matchAll(/- \[[xX]\]\s.*?\(`([^`]+)`\)/g)].map(m => m[1]);
+            for (const l of checked) labels.add(l);
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, labels: [...labels],
+              });
+            }

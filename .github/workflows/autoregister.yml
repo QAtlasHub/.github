@@ -1,0 +1,40 @@
+# Reusable: after Release Drafter completes on main, if Project.toml version
+# changed, post an `@JuliaRegistrator register` comment on the commit. The
+# changelog stub carries the literal 'changelog' keyword Registrator's guideline
+# checks for; the rich notes are produced later by the release-notes action.
+# Caller: on: { workflow_run: { workflows: ["Release Drafter"], types: [completed], branches: [main] } }
+#         jobs: { register: { uses: QAtlasHub/.github/.github/workflows/autoregister.yml@main } }
+name: AutoRegister (reusable)
+on:
+  workflow_call:
+permissions:
+  contents: write
+  issues: write
+jobs:
+  register:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - name: Check if version changed
+        id: v
+        run: |
+          PREV=$(git show HEAD~1:Project.toml 2>/dev/null | grep '^version' | head -1 | sed 's/.*"\(.*\)"/\1/' || echo "")
+          CURR=$(grep '^version' Project.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "prev=$PREV" >> "$GITHUB_OUTPUT"; echo "curr=$CURR" >> "$GITHUB_OUTPUT"
+          if [ "$PREV" != "$CURR" ] && [ -n "$CURR" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Post @JuliaRegistrator comment
+        if: steps.v.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURR: ${{ steps.v.outputs.curr }}
+          PREV: ${{ steps.v.outputs.prev }}
+          COMMIT: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          BODY=$(printf '@JuliaRegistrator register\n\n## Changelog\n\nRelease notes are published on the release for v%s.\n\nVersion bumped from `%s` -> `%s` by commit %s.' \
+            "$CURR" "$PREV" "$CURR" "$COMMIT")
+          gh api "repos/${REPO}/commits/${COMMIT}/comments" -f body="$BODY"
