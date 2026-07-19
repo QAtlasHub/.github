@@ -1,8 +1,11 @@
 # Reusable TagBot: creates the git tag + release shell. Its changelog is kept
 # minimal on purpose — the rich body is written by the release-notes action on
 # tag push (single-source release notes). Caller:
-#   on: { issue_comment: { types: [created] }, workflow_dispatch: { inputs: { lookback: { default: "3" } } } }
-#   jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@main, secrets: inherit } }
+#   on:
+#     schedule: [{ cron: "17 4 * * *" }]    # daily self-backfill — no JuliaTagBot app needed
+#     issue_comment: { types: [created] }    # JuliaTagBot app trigger, if ever installed
+#     workflow_dispatch:                      # manual catch-up
+#   jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@v1, secrets: inherit } }
 name: TagBot (reusable)
 on:
   workflow_call:
@@ -17,12 +20,15 @@ permissions:
   issues: read
 jobs:
   TagBot:
-    if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
+    # our triggers: manual dispatch + daily schedule; JuliaTagBot = the app's comment (if installed).
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.actor == 'JuliaTagBot'
     runs-on: ubuntu-latest
     steps:
       - uses: JuliaRegistries/TagBot@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # BOT_PAT (org secret), not GITHUB_TOKEN: TagBot must tag commits that touch
+          # .github/workflows/*, which GITHUB_TOKEN is forbidden to push/release (403).
+          token: ${{ secrets.BOT_PAT }}
           ssh: ${{ secrets.DOCUMENTER_KEY }}
           changelog: |
             See the release notes for details.
