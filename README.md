@@ -108,10 +108,14 @@ else round-robin. Absent `plan_shards.jl` → safe unsharded fallback.
 The label→version→register→tag→notes chain, all reusable:
 
 ```yaml
-# PRLabeler.yml
+# PRLabeler.yml   (public repo — private ones add `with: { runner: '["self-hosted","rosina"]' }`)
 on: { pull_request: { types: [opened, edited, synchronize, reopened] } }
+permissions: { contents: read, pull-requests: write, issues: write }
 jobs: { label: { uses: QAtlasHub/.github/.github/workflows/labeler.yml@v1 } }
 ```
+> Do **not** hand-roll this with `gh pr edit --add-label`: that command reads the PR over
+> GraphQL, which now returns the Projects-classic sunset notice, and `gh` exits 1 on it. The
+> reusable workflow uses the REST endpoints via `github-script` and is unaffected.
 ```yaml
 # ReleaseDrafter.yml   (repo also ships .github/release-drafter.yml config)
 on: { push: { branches: [main] }, pull_request: { types: [opened, reopened, synchronize, edited] } }
