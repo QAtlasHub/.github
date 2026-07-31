@@ -5,11 +5,19 @@
 #     schedule: [{ cron: "17 4 * * *" }]    # daily self-backfill — no JuliaTagBot app needed
 #     issue_comment: { types: [created] }    # JuliaTagBot app trigger, if ever installed
 #     workflow_dispatch:                      # manual catch-up
-#   jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@v1, secrets: inherit } }
+#   jobs: { tagbot: { uses: QAtlasHub/.github/.github/workflows/tagbot.yml@main, secrets: inherit } }
 name: TagBot (reusable)
 on:
   workflow_call:
     secrets:
+      # BOT_PAT was USED (`token:` below) and never declared. An undeclared secret in a called
+      # workflow is EMPTY unless the caller says `secrets: inherit` — the example above does, which is
+      # the only reason this ever worked and the reason nothing reported it. actionlint has been
+      # flagging it on every `push:main` run since at least 2026-07-26; pull requests passed because
+      # reviewdog only reports inside the diff, so a defect in an untouched file is invisible by
+      # construction on a PR. Same class as lab-sotashimozono/.github#17.
+      BOT_PAT:
+        required: false
       DOCUMENTER_KEY:
         required: false
 permissions:
