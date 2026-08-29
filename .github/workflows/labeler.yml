@@ -32,6 +32,13 @@ permissions:
   issues: write          # addLabels / createLabel are issue-scoped, even on a PR
 jobs:
   label:
+    # A `pull_request` run whose head is a FORK gets a read-only GITHUB_TOKEN, whatever the
+    # `permissions:` block says — so `createLabel`/`addLabels` come back 403 and the check goes
+    # red on a PR that is otherwise fine. Labelling a fork PR needs `pull_request_target`, which
+    # is a caller-side change; until then, skip rather than fail. Measured on
+    # sotashimozono/Reversi.jl#54 (an outside contribution): tests all green, this job red on
+    # `Resource not accessible by integration`.
+    if: github.event.pull_request.head.repo.fork != true
     runs-on: ${{ fromJSON(inputs.runner) }}
     steps:
       - uses: actions/github-script@v9
