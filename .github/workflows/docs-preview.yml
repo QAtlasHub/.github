@@ -13,9 +13,12 @@ on:
         type: string
         default: ''
       preview-base:
-        description: 'Base URL where docs are served; the preview link is <base>/<repo>/previews/PR<N>/.'
+        description: >-
+          Base URL where docs are served; the preview link is <base>/<repo>/previews/PR<N>/.
+          Empty asks the Pages API where this repository's site actually is, which already
+          accounts for a custom domain.
         type: string
-        default: 'https://codes.sota-shimozono.com'
+        default: ''
     secrets:
       DOCUMENTER_KEY:
         required: false
@@ -23,6 +26,7 @@ permissions:
   contents: write
   pull-requests: write
   statuses: write
+  pages: read
 jobs:
   preview:
     runs-on: ubuntu-latest
@@ -51,6 +55,30 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${{ github.repository }}/pages/builds"
+      # The published URL is asked of GitHub rather than assembled from a constant. A constant
+      # cannot know about a custom domain, and the one that was here —
+      # `https://codes.sota-shimozono.com` — resolves to `sinkhole.paloaltonetworks.com`, so every
+      # preview comment in a repository using the default pointed at an unreachable host.
+      - name: Resolve the published site URL
+        id: site
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE: ${{ inputs.preview-base }}
+          REPO: ${{ github.repository }}
+          NAME: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -n "$BASE" ]; then
+            root="${BASE%/}/$NAME"
+          else
+            root=$(gh api "repos/$REPO/pages" --jq '.html_url' 2>/dev/null || true)
+            # No Pages site yet, or no permission to read it: fall back to the host GitHub would
+            # serve it from. Lowercased, because the owner may be spelled in mixed case.
+            [ -n "$root" ] || root="https://$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]').github.io/$NAME"
+          fi
+          echo "url=${root%/}/previews/PR$PR/" >> "$GITHUB_OUTPUT"
+
       - name: Find existing preview comment
         id: find-comment
         uses: peter-evans/find-comment@v4
@@ -66,6 +94,6 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           edit-mode: replace
           body: |
-            📚 **Docs preview**: ${{ inputs.preview-base }}/${{ github.event.repository.name }}/previews/PR${{ github.event.pull_request.number }}/
+            📚 **Docs preview**: ${{ steps.site.outputs.url }}
 
             *(updates on each push to this PR)*
