@@ -73,6 +73,11 @@ jobs:
             root="${BASE%/}/$NAME"
           else
             root=$(gh api "repos/$REPO/pages" --jq '.html_url' 2>/dev/null || true)
+            # Checked for SHAPE, not for exit code. With no Pages site `gh api` writes its 404 JSON
+            # to STDOUT, `--jq` passes it through, and `|| true` hides the failure — measured on
+            # templateHPC.jl, where the posted link began
+            # `https://docs.github.com/rest/pages/pages#...","status":"404"}/previews/PR9/`.
+            case "$root" in https://*) ;; *) root='' ;; esac
             # No Pages site yet, or no permission to read it: fall back to the host GitHub would
             # serve it from. Lowercased, because the owner may be spelled in mixed case.
             [ -n "$root" ] || root="https://$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]').github.io/$NAME"
