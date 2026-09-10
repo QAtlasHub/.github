@@ -67,7 +67,7 @@ jobs:
   preview:
     uses: QAtlasHub/.github/.github/workflows/docs-preview.yml@v1
     secrets: inherit
-    # with: { preview-base: https://codes.sota-shimozono.com }
+    # with: { preview-base: https://docs.example.org }   # only if not served from GitHub Pages
 ```
 
 **Delete preview** (remove previews/PR<N> on close) — `.github/workflows/CleanupPreview.yml`:
