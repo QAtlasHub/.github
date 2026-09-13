@@ -1,5 +1,15 @@
 # Reusable JuliaFormatter (v2) check. Call from a repo with:
 #   jobs: { format: { uses: QAtlasHub/.github/.github/workflows/format-check.yml@main } }
+#
+# `Pkg.activate(; temp=true)` is load-bearing. A bare `Pkg.add` resolves into the runner's
+# shared/default environment, where the compat bounds already there cap the result: the same
+# commit resolved JuliaFormatter 2.3.2 on a self-hosted runner and 2.10.1 on a GitHub-hosted one,
+# and a leftover ITensorFormatter in such a depot once made the install fail outright. Same code,
+# different verdict, which presented for months as a "format-check flake".
+#
+# The version floats, deliberately. When a new 2.x reflows files the answer is to adopt it and
+# reformat, not to freeze the old one: a pin here becomes standing debt in every caller and rots
+# while the ecosystem moves. Reproducibility comes from the clean env above, not from a pin.
 name: Format Check (reusable)
 on:
   workflow_call:
@@ -13,16 +23,27 @@ jobs:
       - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
-      - name: Install JuliaFormatter
-        run: julia -e 'using Pkg; Pkg.add(name="JuliaFormatter", version="2"); using JuliaFormatter; @info "JuliaFormatter $(pkgversion(JuliaFormatter))"'
-      - name: Check formatting
+      - name: JuliaFormatter check
+        shell: julia --color=yes {0}
         run: |
-          julia -e '
-            using JuliaFormatter
-            ok = format(".", verbose=true, overwrite=false)
-            if !ok
-              println(stderr, "❌ Formatting issues found. Run locally: julia -e \"using JuliaFormatter; format(\\\".\\\")\"")
+          using Pkg
+          Pkg.activate(; temp = true)                       # clean env — no depot compat capping the resolve
+          Pkg.add(PackageSpec(name = "JuliaFormatter", version = "2"))
+          using JuliaFormatter
+          v = pkgversion(JuliaFormatter)
+          # `using` falls back to the depot's default env when the active project does not declare
+          # the package, loading a different version and saying nothing, so ask the project itself.
+          declared = [p.version for (_, p) in Pkg.dependencies() if p.name == "JuliaFormatter"]
+          if declared != [v]
+              println(stderr, "❌ JuliaFormatter $v came from outside the temp project, which holds $declared.")
               exit(1)
-            end
-            println("✅ All files are properly formatted.")
-          '
+          end
+          @info "JuliaFormatter $v"
+          ok = format("."; verbose = true, overwrite = false)
+          if !ok
+              println(stderr, "❌ Not formatted, under JuliaFormatter $v. `overwrite=false` above is the check;")
+              println(stderr, "   locally you want `true`, and one pass does not always converge. Run:")
+              println(stderr, "   julia -e 'using Pkg; Pkg.activate(;temp=true); Pkg.add(PackageSpec(name=\"JuliaFormatter\", version=\"2\")); using JuliaFormatter; for _ in 1:5; format(\".\"; overwrite=true) && break end'")
+              exit(1)
+          end
+          println("✅ All files properly formatted.")
