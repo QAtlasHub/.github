@@ -31,5 +31,14 @@ jobs:
       - name: CompatHelper.main()
         env:
           GITHUB_TOKEN: ${{ secrets.BOT_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOT_PAT || secrets.GITHUB_TOKEN }}
           COMPATHELPER_PRIV: ${{ secrets.COMPATHELPER_PRIV }}
-        run: julia -e 'using CompatHelper; CompatHelper.main()'
+        # CompatHelper skips a bump when an open PR already has its title, but it only
+        # counts PRs by `username` (default github-actions[bot]). With BOT_PAT the PRs are
+        # the PAT owner's, so none counted and every run opened the same PR again. Pass the
+        # token's own login; GITHUB_TOKEN cannot call /user and keeps the default.
+        run: |
+          LOGIN=$(gh api user --jq .login 2>/dev/null) || LOGIN='github-actions[bot]'
+          echo "CompatHelper PR author: $LOGIN"
+          julia -e 'using CompatHelper
+                    CompatHelper.main(ENV, CompatHelper.GitHubActions(; username = ARGS[1]))' "$LOGIN"
