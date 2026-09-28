@@ -33,13 +33,24 @@ jobs:
         env:
           BASE: ${{ steps.base.outputs.version }}
           PR:   ${{ steps.pr.outputs.version }}
+          USER_TYPE: ${{ github.event.pull_request.user.type }}
+          HEAD_REF:  ${{ github.head_ref }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
-          # Bot-authored PRs (CompatHelper / dependabot) bump [compat]/deps, not
+          # Dependency PRs (CompatHelper / dependabot) bump [compat]/deps, not
           # the package version — exempt them so the required check still runs
-          # (and passes) instead of blocking auto-merge.
-          if [ "${{ github.event.pull_request.user.type }}" = "Bot" ]; then
+          # (and passes) instead of blocking auto-merge. They are recognised by
+          # branch as well as author: CompatHelper runs with BOT_PAT, so its PRs
+          # are authored by a User and the author check alone never matched.
+          if [ "$USER_TYPE" = "Bot" ]; then
             echo "✓ bot-authored PR — version bump not required"; exit 0
           fi
+          case "$HEAD_REF" in
+            compathelper/*|dependabot/*)
+              if [ "$SAME_REPO" = "true" ]; then
+                echo "✓ dependency PR ($HEAD_REF) — version bump not required"; exit 0
+              fi ;;
+          esac
           IFS='.' read -r bM bm bp <<< "$BASE"
           IFS='.' read -r pM pm pp <<< "$PR"
           bM=${bM:-0}; bm=${bm:-0}; bp=${bp:-0}
